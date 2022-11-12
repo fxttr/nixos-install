@@ -230,5 +230,6 @@ echo "
 }" > /mnt/persist/etc/nixos/configuration.nix
 
 info "Installing NixOS to /mnt ..."
+rm -rf /mnt/etc/nixos/configuration.nix
 ln -s /mnt/persist/etc/nixos/configuration.nix /mnt/etc/nixos/configuration.nix
 nixos-install -I "nixos-config=/mnt/persist/etc/nixos/configuration.nix" --no-root-passwd  # already prompted for and configured password
