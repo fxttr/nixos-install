@@ -134,12 +134,6 @@ info "Moving generated hardware-configuration.nix to /persist/etc/nixos/ ..."
 mkdir -p /mnt/persist/etc/nixos
 mv /mnt/etc/nixos/hardware-configuration.nix /mnt/persist/etc/nixos/
 
-info "Backing up the originally generated configuration.nix to /persist/etc/nixos/configuration.nix.original ..."
-mv /mnt/etc/nixos/configuration.nix /mnt/persist/etc/nixos/configuration.nix.original
-
-info "Backing up the this installer script to /persist/etc/nixos/install.sh.original ..."
-cp "$0" /mnt/persist/etc/nixos/install.sh.original
-
 info "Writing NixOS configuration to /persist/etc/nixos/ ..."
 echo "
 { config, pkgs, lib, ... }:
