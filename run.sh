@@ -135,52 +135,40 @@ mkdir -p /mnt/persist/etc/nixos
 mv /mnt/etc/nixos/hardware-configuration.nix /mnt/persist/etc/nixos/
 
 info "Writing NixOS configuration to /persist/etc/nixos/ ..."
-echo "
+cat <<EOF > /mnt/persist/etc/nixos/configuration.nix
 { config, pkgs, lib, ... }:
-
 {
   imports =
     [ 
       ./hardware-configuration.nix
     ];
-
   nix.nixPath =
     [
       "nixpkgs=/nix/var/nix/profiles/per-user/root/channels/nixos"
       "nixos-config=/persist/etc/nixos/configuration.nix"
       "/nix/var/nix/profiles/per-user/root/channels"
     ];
-
   # Use the systemd-boot EFI boot loader.
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
-
   # source: https://grahamc.com/blog/erase-your-darlings
   boot.initrd.postDeviceCommands = lib.mkAfter ''
     zfs rollback -r ${ZFS_BLANK_SNAPSHOT}
   '';
-
   # source: https://grahamc.com/blog/nixos-on-zfs
   boot.kernelParams = [ "elevator=none" ];
-
   networking.hostId = "$(head -c 8 /etc/machine-id)";
-
-  networking.useDHCP = true;
-
+  networking.useDHCP = false;
+  networking.interfaces.enp3s0.useDHCP = true;
   environment.systemPackages = with pkgs;
     [
-      vim
-      htop
-      git
-      home-manager
+      emacs
     ];
-
   services.zfs = {
     autoScrub.enable = true;
     autoSnapshot.enable = true;
     # TODO: autoReplication
   };
-
   services.openssh = {
     enable = true;
     permitRootLogin = "no";
@@ -198,36 +186,33 @@ echo "
         }
       ];
   };
-
   users = {
     mutableUsers = false;
     users = {
       root = {
         initialHashedPassword = "${ROOT_PASSWORD_HASH}";
       };
-
       ${USER_NAME} = {
         createHome = true;
-        isNormalUser = true;
         initialHashedPassword = "${USER_PASSWORD_HASH}";
-	      extraGroups = [ "wheel" ];
-	      group = "users";
-	      uid = 1000;
-	      home = "/home/${USER_NAME}";
-	      shell = pkgs.zsh;
+	extraGroups = [ "wheel" ];
+	group = "users";
+	uid = 1000;
+	home = "/home/${USER_NAME}";
+	useDefaultShell = true;
         openssh.authorizedKeys.keys = [ "${AUTHORIZED_SSH_KEY}" ];
       };
     };
   };
-
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions
   # on your system were taken. It‘s perfectly fine and recommended to leave
   # this value at the release version of the first install of this system.
   # Before changing this value read the documentation for this option
   # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
-  system.stateVersion = "22.11"; # Did you read the comment?
-}" > /mnt/persist/etc/nixos/configuration.nix
+  system.stateVersion = "20.03"; # Did you read the comment?
+}
+EOF
 
 info "Installing NixOS to /mnt ..."
 rm -rf /mnt/etc/nixos/configuration.nix
