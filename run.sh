@@ -141,7 +141,7 @@ info "Backing up the this installer script to /persist/etc/nixos/install.sh.orig
 cp "$0" /mnt/persist/etc/nixos/install.sh.original
 
 info "Writing NixOS configuration to /persist/etc/nixos/ ..."
-cat <<EOF > /mnt/persist/etc/nixos/configuration.nix
+echo "
 { config, pkgs, lib, ... }:
 
 {
@@ -233,8 +233,7 @@ cat <<EOF > /mnt/persist/etc/nixos/configuration.nix
   # Before changing this value read the documentation for this option
   # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
   system.stateVersion = "22.11"; # Did you read the comment?
-}
-EOF
+}" > /mnt/persist/etc/nixos/configuration.nix
 
 info "Installing NixOS to /mnt ..."
 ln -s /mnt/persist/etc/nixos/configuration.nix /mnt/etc/nixos/configuration.nix
