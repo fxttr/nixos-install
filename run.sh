@@ -159,10 +159,14 @@ cat <<EOF > /mnt/persist/etc/nixos/configuration.nix
   boot.kernelParams = [ "elevator=none" ];
   networking.hostId = "$(head -c 8 /etc/machine-id)";
   networking.useDHCP = true;
+   nix.extraOptions = lib.optionalString (config.nix.package == pkgs.nixFlakes)
+       "experimental-features = nix-command flakes";
+  networking.hostName = "nixos";
   environment.systemPackages = with pkgs;
     [
       vim
       htop
+      git
       home-manager
     ];
   services.zfs = {
@@ -187,6 +191,7 @@ cat <<EOF > /mnt/persist/etc/nixos/configuration.nix
         }
       ];
   };
+  
   users = {
     mutableUsers = false;
     users = {
