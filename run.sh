@@ -158,11 +158,12 @@ cat <<EOF > /mnt/persist/etc/nixos/configuration.nix
   # source: https://grahamc.com/blog/nixos-on-zfs
   boot.kernelParams = [ "elevator=none" ];
   networking.hostId = "$(head -c 8 /etc/machine-id)";
-  networking.useDHCP = false;
-  networking.interfaces.enp3s0.useDHCP = true;
+  networking.useDHCP = true;
   environment.systemPackages = with pkgs;
     [
-      emacs
+      vim
+      htop
+      home-manager
     ];
   services.zfs = {
     autoScrub.enable = true;
@@ -194,12 +195,13 @@ cat <<EOF > /mnt/persist/etc/nixos/configuration.nix
       };
       ${USER_NAME} = {
         createHome = true;
+	isNormalUser = true;
         initialHashedPassword = "${USER_PASSWORD_HASH}";
 	extraGroups = [ "wheel" ];
 	group = "users";
 	uid = 1000;
 	home = "/home/${USER_NAME}";
-	useDefaultShell = true;
+	shell = pkgs.zsh;
         openssh.authorizedKeys.keys = [ "${AUTHORIZED_SSH_KEY}" ];
       };
     };
@@ -210,7 +212,7 @@ cat <<EOF > /mnt/persist/etc/nixos/configuration.nix
   # this value at the release version of the first install of this system.
   # Before changing this value read the documentation for this option
   # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
-  system.stateVersion = "20.03"; # Did you read the comment?
+  system.stateVersion = "22.11"; # Did you read the comment?
 }
 EOF
 
