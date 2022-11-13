@@ -1,5 +1,5 @@
 # nixos-install
-Install-Script for NixOS
+Install-Script for NixOS. I use it mostly to quickly deploy new servers within seconds.
 
 ### Usage
 ```
