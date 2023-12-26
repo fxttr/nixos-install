@@ -6,7 +6,7 @@ export COLOR_RESET="\033[0m"
 export RED_BG="\033[41m"
 export BLUE_BG="\033[44m"
 export DISK=$1
-export AUTHORIZED_SSH_KEY=$2
+export HOSTNAME=$2
 export ZFS_POOL="rpool"
 
 function err {
@@ -27,15 +27,15 @@ if ! [[ -v DISK ]]; then
     exit 1
 fi
 
+if ! [[ -v HOSTNAME ]]; then
+    err "Missing argument. Expected hostname, e.g. 'nixos'"
+    exit 1
+fi
+
 export DISK_PATH="/dev/${DISK}"
 
 if ! [[ -b "$DISK_PATH" ]]; then
     err "Invalid argument: '${DISK_PATH}' is not a block special file"
-    exit 1
-fi
-
-if ! [[ -v AUTHORIZED_SSH_KEY ]]; then
-    err "Missing argument. Expected public SSH key, e.g. 'ssh-rsa AAAAB...'"
     exit 1
 fi
 
@@ -63,10 +63,10 @@ info "Formatting boot partition ..."
 mkfs.fat -F 32 -n boot "$DISK_PART_BOOT"
 
 info "Creating '$ZFS_POOL' ZFS pool for '$DISK_PART_ROOT' ..."
-zpool create -f "$ZFS_POOL" "$DISK_PART_ROOT"
+zpool create -o ashift=13 -o atime=off -o xattr=sa -o compression=lz4 -f "$ZFS_POOL" "$DISK_PART_ROOT"
 
-info "Enabling compression for '$ZFS_POOL' ZFS pool ..."
-zfs set compression=on "$ZFS_POOL"
+#info "Enabling compression for '$ZFS_POOL' ZFS pool ..."
+#zfs set compression=on "$ZFS_POOL"
 
 info "Creating '$ZFS_DS_ROOT' ZFS dataset ..."
 zfs create -p -o mountpoint=legacy "$ZFS_DS_ROOT"
@@ -142,26 +142,28 @@ cat <<EOF > /mnt/persist/etc/nixos/configuration.nix
     [ 
       ./hardware-configuration.nix
     ];
+
   nix.nixPath =
     [
       "nixpkgs=/nix/var/nix/profiles/per-user/root/channels/nixos"
       "nixos-config=/persist/etc/nixos/configuration.nix"
       "/nix/var/nix/profiles/per-user/root/channels"
     ];
+
   # Use the systemd-boot EFI boot loader.
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
-  # source: https://grahamc.com/blog/erase-your-darlings
   boot.initrd.postDeviceCommands = lib.mkAfter ''
     zfs rollback -r ${ZFS_BLANK_SNAPSHOT}
   '';
-  # source: https://grahamc.com/blog/nixos-on-zfs
+
   boot.kernelParams = [ "elevator=none" ];
   networking.hostId = "$(head -c 8 /etc/machine-id)";
   networking.useDHCP = true;
    nix.extraOptions = lib.optionalString (config.nix.package == pkgs.nixFlakes)
-       "experimental-features = nix-command flakes";
-  networking.hostName = "nixos";
+      "experimental-features = nix-command flakes";
+
+  networking.hostName = "${HOSTNAME}";
   environment.systemPackages = with pkgs;
     [
       vim
@@ -169,15 +171,21 @@ cat <<EOF > /mnt/persist/etc/nixos/configuration.nix
       git
       home-manager
     ];
+
+  programs.zsh = {
+    enable = true;
+  };
+
   services.zfs = {
     autoScrub.enable = true;
     autoSnapshot.enable = true;
     # TODO: autoReplication
   };
+
   services.openssh = {
     enable = true;
-    permitRootLogin = "no";
-    passwordAuthentication = false;
+    permitRootLogin = "yes";
+    passwordAuthentication = true;
     hostKeys =
       [
         {
@@ -198,26 +206,29 @@ cat <<EOF > /mnt/persist/etc/nixos/configuration.nix
       root = {
         initialHashedPassword = "${ROOT_PASSWORD_HASH}";
       };
+
       ${USER_NAME} = {
         createHome = true;
-	isNormalUser = true;
+	      isNormalUser = true;
         initialHashedPassword = "${USER_PASSWORD_HASH}";
-	extraGroups = [ "wheel" ];
-	group = "users";
-	uid = 1000;
-	home = "/home/${USER_NAME}";
-	shell = pkgs.zsh;
-        openssh.authorizedKeys.keys = [ "${AUTHORIZED_SSH_KEY}" ];
+	      extraGroups = [ "wheel" ];
+	      group = "users";
+	      uid = 1000;
+	      home = "/home/${USER_NAME}";
+	      shell = pkgs.zsh;
+
+        openssh.authorizedKeys.keys = [
+          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDIf72dv444ALp/SZ2zkWJjOboAjyQJA3FGJsr/ADPFO"
+          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEJQSkwfJHE6SA4otYljLI2kVlQxt3aLhHrjKLcZAmul"
+          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBwXdh/VnT5KGFoQcq2rXiKVXPLMcPLxN6HAZqaIptTI"
+          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBvRD94isYVWqQIL9b9aP+mZiIBhJkMVPU3744C+NjD6"
+          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFBOAvFL34WZRnKtwMx27zAXq4Z8vQxK8oR+O+6UYwet eddsa-key-20221216"
+          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOCbnpc2pnr/wk64fHe+nI3ydgk6umjHflT8vkN6IPHL fb@fx-ttr.de"
+        ];
       };
     };
   };
-  # This value determines the NixOS release from which the default
-  # settings for stateful data, like file locations and database versions
-  # on your system were taken. It‘s perfectly fine and recommended to leave
-  # this value at the release version of the first install of this system.
-  # Before changing this value read the documentation for this option
-  # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
-  system.stateVersion = "22.11"; # Did you read the comment?
+  system.stateVersion = "23.11"; # Did you read the comment?
 }
 EOF
 
