@@ -3,7 +3,7 @@ Install-Script for NixOS. I use it mostly to quickly deploy new servers within s
 
 ### Usage
 ```
-bash <(curl -sSf https://raw.githubusercontent.com/fxttr/nixos-install/master/run.sh) <disk> <hostname>
+bash <(curl -sSf https://raw.githubusercontent.com/fxttr/nixos-install/master/install-zfs.sh) <disk> <hostname>
 ```
 
 ### Inspiration
